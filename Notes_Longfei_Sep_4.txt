@@ -1,0 +1,4 @@
+[h,poly_coeff] = opt_poly_bisect(lam,10,4,'rotated chebyshev')
+pc = fliplr(poly_coeff)
+plot(abs(lam),abs(polyval(pc,h*lam)-exp(h*lam))./abs(exp(h*lam)))
+rkm = rk_opt(10,4,'erk','ssp','poly_coeff_ind',[5:10],'poly_coeff_val',poly_coeff(6:11))
