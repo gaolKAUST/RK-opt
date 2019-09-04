@@ -29,7 +29,17 @@ function [h,poly_coeff] = opt_poly_bisect(lam,s,p,basis,varargin)
 [lam_func,tol_bisect,tol_feasible,h_min,h_max,max_steps,...
         h_true,do_plot] = opt_poly_params(s,lam,varargin);
 
-diagnostics_init;
+if nargout >3           %Diagnostics requested
+    if isempty(h_true)
+        error('Enabling diagnostics assumes h_true is given!');
+    end
+    diag_on=true;
+    diag.lam = lam; diag.s = s; diag.p = p; diag.basis = basis; diag.tol_bisect = tol_bisect;
+    diag.tol_feasible = tol_feasible; diag.h_min = h_min; diag.h_max = h_max; diag.max_steps = max_steps; diag.h_true = h_true;
+    diag.solved_steps = []; diag.failed_steps = []; diag.right_steps = []; diag.wrong_steps = [];
+else
+    diag_on=false;
+end
 
 if strcmp(basis,'monomial')
     row_scale = factorial(0:s);
@@ -150,7 +160,10 @@ if ~strcmp(basis,'monomial')
         b(:,i) = b(:,i)./row_scaling';
     end
 end
-        
+
+% HACK!!!
+epsi = 0.01
+
 cvx_begin
     cvx_quiet(true)
     cvx_precision(precision)
@@ -159,11 +172,13 @@ cvx_begin
     if strcmp(basis,'monomial')
         variable poly_coeffs(s-p);
         fixedvec = c(:,1:p+1)*fixed_coefficients;
-        R=abs(fixedvec+c(:,p+2:end)*poly_coeffs)-1.;
+        R=abs(fixedvec+c(:,p+2:end)*poly_coeffs)-1;
     else
         variable poly_coeffs(s+1) 
         b(:,1:p+1)'*poly_coeffs==fixed_coefficients;
-        R=abs(c*poly_coeffs)-1;
+        R1=abs(c*poly_coeffs)-1;
+        R2=abs(c*poly_coeffs - exp(h*lam))./abs(exp(h*lam))-epsi
+        R = [R1; R2];
     end
     minimize max(R)
 cvx_end
